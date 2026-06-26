@@ -1,0 +1,30 @@
+global lockc, unlockc, wakec
+
+probe kernel.function("__lock_page") {
+  lockc[execname()] <<< 1
+}
+
+probe kernel.function("unlock_page") {
+  unlockc[execname()] <<< 1
+}
+
+probe kernel.function("wake_up_page_bit") {
+  wakec[execname()] <<< 1
+}
+
+probe timer.s(1) {
+  printf("__lock_page by comm:\n")
+  foreach (n in lockc- limit 5)
+    printf("  %s %d\n", n, @count(lockc[n]))
+
+  printf("unlock_page by comm:\n")
+  foreach (n in unlockc- limit 5)
+    printf("  %s %d\n", n, @count(unlockc[n]))
+
+  printf("wake_up_page_bit by comm:\n")
+  foreach (n in wakec- limit 5)
+    printf("  %s %d\n", n, @count(wakec[n]))
+
+  exit()
+}
+

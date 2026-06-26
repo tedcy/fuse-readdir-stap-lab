@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+. "${REPRO_ROOT:-$HOME/systemtap-readdir-repro}/repro-env.sh"
+
+REPO_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+case "${1:-}" in
+  lock-page)
+    STP=$REPO_ROOT/stap/function-lock-page.stp
+    ;;
+  lock-wake)
+    STP=$REPO_ROOT/stap/function-lock-wake.stp
+    ;;
+  readdir-entry)
+    STP=$REPO_ROOT/stap/function-readdir-entry.stp
+    ;;
+  *)
+    echo "usage: $0 {lock-page|lock-wake|readdir-entry}" >&2
+    exit 2
+    ;;
+esac
+
+sudo env \
+  PATH="$TOOLCHAIN_BIN:$STAP_HOME/bin:$PATH" \
+  LD_LIBRARY_PATH="$ELFUTILS_HOME/lib:${LD_LIBRARY_PATH:-}" \
+  "$STAP_HOME/bin/stap" -q \
+  -r "$BT" \
+  -B CC="$TOOLCHAIN_BIN/gcc-10" \
+  -B KERNELRELEASE="$KREL" \
+  -B KERNELVERSION="$KREL" \
+  -B CONFIG_MODULE_SIG= \
+  -B CONFIG_MODULE_SIG_ALL= \
+  -B CFLAGS_MODULE='-DPKG_ABI=48 -DSTAPCONF_GET_USER_PAGES_REMOTE -DSTAPCONF_TASK_USER_REGSET_VIEW_EXPORTED -DSTAPCONF_SYNCHRONIZE_RCU -DSTAPCONF_PDE_DATA2 -DSTAPCONF_KERN_PATH -Wno-error -g0' \
+  "$STP"
+

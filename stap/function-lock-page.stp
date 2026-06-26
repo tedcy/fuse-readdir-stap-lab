@@ -1,0 +1,13 @@
+global c
+
+probe kernel.function("__lock_page") {
+  c[execname()] <<< 1
+}
+
+probe timer.s(1) {
+  printf("__lock_page by comm:\n")
+  foreach (n in c- limit 10)
+    printf("  %s %d\n", n, @count(c[n]))
+  exit()
+}
+

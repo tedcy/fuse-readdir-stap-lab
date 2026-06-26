@@ -1,0 +1,125 @@
+global n_l502, n_l539, n_p388, n_retry
+global lock_count, cached_count, parse_count, retry_count
+
+function interested:string(c:string) {
+  if (c == "stat" || c == "@TARGET_READER_COMM@")
+    return "yes"
+
+  return "no"
+}
+
+probe begin {
+  printf("field-level SystemTap start: cache/page0 evidence, duration=15s\n")
+}
+
+probe kernel.function("__lock_page") {
+  c = execname()
+  lock_count[c]++
+}
+
+/* P1 / L502 cached_state: read cache state and reader position. */
+probe kernel.statement("fuse_readdir@fs/fuse/readdir.c:502") {
+  c = execname()
+  if (interested(c) == "yes") {
+    cached_count[c]++
+
+    if (n_l502 < 20) {
+      cache_off =
+        @cast($file->private_data, "struct fuse_file", "kernel")
+          ->readdir->cache_off
+      ff_pos =
+        @cast($file->private_data, "struct fuse_file", "kernel")
+          ->readdir->pos
+      ff_ver =
+        @cast($file->private_data, "struct fuse_file", "kernel")
+          ->readdir->version
+
+      fi_cached =
+        @cast($file->f_inode, "struct fuse_inode", "kernel")
+          ->rdc->cached
+      fi_size =
+        @cast($file->f_inode, "struct fuse_inode", "kernel")
+          ->rdc->size
+      fi_ver =
+        @cast($file->f_inode, "struct fuse_inode", "kernel")
+          ->rdc->version
+
+      printf("L502 cached_state comm=%s pid=%d ctx_pos=%d ff_pos=%d cache_off=%d index=%d fi_cached=%d fi_size=%d ff_ver=%d fi_ver=%d\n",
+             c, pid(), $ctx->pos, ff_pos, cache_off, cache_off >> 12,
+             fi_cached, fi_size, ff_ver, fi_ver)
+
+      n_l502++
+    }
+  }
+}
+
+/* P2 / L539 before_parse: read cache_off, page index, and parse size. */
+probe kernel.statement("fuse_readdir_cached@fs/fuse/readdir.c:539") {
+  c = execname()
+  if (interested(c) == "yes") {
+    if (n_l539 < 20) {
+      cache_off = $ff->readdir->cache_off
+
+      printf("L539 before_parse comm=%s pid=%d cache_off=%d index=%d size=%d\n",
+             c, pid(), cache_off, cache_off >> 12, $size)
+
+      n_l539++
+    }
+  }
+}
+
+/* P3 / L388 dirent: read the current cached struct fuse_dirent. */
+probe kernel.statement("fuse_parse_cache@fs/fuse/readdir.c:388") {
+  c = execname()
+  if (interested(c) == "yes") {
+    parse_count[c]++
+
+    if (n_p388 < 20) {
+      printf("L388 dirent comm=%s pid=%d offset=%d namelen=%d ino=%d off=%d type=%d\n",
+             c, pid(), $offset, $dirent->namelen,
+             $dirent->ino, $dirent->off, $dirent->type)
+
+      n_p388++
+    }
+  }
+}
+
+/* P4 / L553 retry_before_align: read cache_off before ALIGN(...). */
+probe kernel.statement("fuse_readdir_cached@fs/fuse/readdir.c:553") {
+  c = execname()
+  if (interested(c) == "yes") {
+    retry_count[c]++
+
+    if (n_retry < 20) {
+      cache_off = $ff->readdir->cache_off
+
+      printf("L553 retry_before_align comm=%s pid=%d cache_off=%d index=%d\n",
+             c, pid(), cache_off, cache_off >> 12)
+
+      n_retry++
+    }
+  }
+}
+
+probe timer.s(15) {
+  printf("\n-- summary --\n")
+
+  printf("__lock_page by comm:\n")
+  foreach (c in lock_count- limit 20)
+    printf("  %s %d\n", c, lock_count[c])
+
+  printf("cached L502 by comm:\n")
+  foreach (c in cached_count- limit 20)
+    printf("  %s %d\n", c, cached_count[c])
+
+  printf("parse L388 by comm:\n")
+  foreach (c in parse_count- limit 20)
+    printf("  %s %d\n", c, parse_count[c])
+
+  printf("retry L553 by comm:\n")
+  foreach (c in retry_count- limit 20)
+    printf("  %s %d\n", c, retry_count[c])
+
+  exit()
+}
+

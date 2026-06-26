@@ -1,0 +1,14 @@
+*.tmp
+*.log
+.cache/
+build/
+debs/
+src/
+kernel-headers/
+systemtap-5.5/
+elfutils-0.195/
+boost-1.71/
+toolchain/
+dbgsym-*/
+repro-env.sh
+

@@ -1,0 +1,30 @@
+global lp, fr, fu
+
+probe kernel.function("__lock_page") {
+  lp[execname()] <<< 1
+}
+
+probe kernel.function("fuse_readdir") {
+  fr[execname()] <<< 1
+}
+
+probe kernel.function("fuse_readdir_uncached") {
+  fu[execname()] <<< 1
+}
+
+probe timer.s(1) {
+  printf("__lock_page by comm:\n")
+  foreach (n in lp- limit 5)
+    printf("  %s %d\n", n, @count(lp[n]))
+
+  printf("fuse_readdir entry by comm:\n")
+  foreach (n in fr- limit 5)
+    printf("  %s %d\n", n, @count(fr[n]))
+
+  printf("fuse_readdir_uncached entry by comm:\n")
+  foreach (n in fu- limit 5)
+    printf("  %s %d\n", n, @count(fu[n]))
+
+  exit()
+}
+
