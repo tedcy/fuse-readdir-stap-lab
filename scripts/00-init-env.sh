@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-sudo -n true
+sudo -v
 
 if command -v mokutil >/dev/null 2>&1; then
   mokutil --sb-state || true
@@ -40,6 +40,8 @@ KREL=${KREL:-$(uname -r)}
 KBASE=${KBASE:-${KREL%-generic}}
 UBUNTU_REV=${UBUNTU_REV:-$(uname -v | sed -n 's/^#\([0-9]\+\)-Ubuntu.*/\1/p')}
 KPKGVER=${KPKGVER:-$KBASE.$UBUNTU_REV}
+KSRC_SERIES=${KSRC_SERIES:-$(printf '%s\n' "$KBASE" | sed 's/-[0-9]\+$//')}
+PKG_ABI=${PKG_ABI:-${KBASE##*-}}
 
 mkdir -p "$REPRO_ROOT"
 
@@ -49,6 +51,8 @@ export KREL=$KREL
 export KBASE=$KBASE
 export UBUNTU_REV=$UBUNTU_REV
 export KPKGVER=$KPKGVER
+export KSRC_SERIES=$KSRC_SERIES
+export PKG_ABI=$PKG_ABI
 
 export SRC_ROOT=\$REPRO_ROOT/src
 export DEB_ROOT=\$REPRO_ROOT/debs
@@ -73,8 +77,7 @@ mkdir -p "$SRC_ROOT" "$DEB_ROOT" "$BUILD_ROOT" \
   "$KHEADERS_ROOT" "$STAP_HOME" "$ELFUTILS_HOME" \
   "$BOOST_ROOT" "$TOOLCHAIN_BIN" "$DBGSYM_ROOT"
 
-printf 'KREL=%s\nKBASE=%s\nUBUNTU_REV=%s\nKPKGVER=%s\n' \
-  "$KREL" "$KBASE" "$UBUNTU_REV" "$KPKGVER"
+printf 'KREL=%s\nKBASE=%s\nUBUNTU_REV=%s\nKPKGVER=%s\nKSRC_SERIES=%s\nPKG_ABI=%s\n' \
+  "$KREL" "$KBASE" "$UBUNTU_REV" "$KPKGVER" "$KSRC_SERIES" "$PKG_ABI"
 printf 'REPRO_ROOT=%s\nBT=%s\nSTAP_HOME=%s\nELFUTILS_HOME=%s\nTOOLCHAIN_BIN=%s\nDBGSYM_ROOT=%s\n' \
   "$REPRO_ROOT" "$BT" "$STAP_HOME" "$ELFUTILS_HOME" "$TOOLCHAIN_BIN" "$DBGSYM_ROOT"
-

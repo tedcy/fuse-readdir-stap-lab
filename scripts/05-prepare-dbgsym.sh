@@ -5,18 +5,18 @@ set -euo pipefail
 
 BASE=${UBUNTU_LINUX_POOL:-http://archive.ubuntu.com/ubuntu/pool/main/l/linux}
 KERNEL_SRC_WORK=$SRC_ROOT/kernel-source
-SRC_DEB=$DEB_ROOT/linux-source-5.4.0_${KPKGVER}_all.deb
+SRC_DEB=$DEB_ROOT/linux-source-${KSRC_SERIES}_${KPKGVER}_all.deb
 SRC_DEB_ROOT=$KERNEL_SRC_WORK/linux-source-deb-root
-LINUX_SRC=$KERNEL_SRC_WORK/linux-source-5.4.0
+LINUX_SRC=$KERNEL_SRC_WORK/linux-source-${KSRC_SERIES}
 
 mkdir -p "$KERNEL_SRC_WORK" "$SRC_DEB_ROOT"
 
 test -s "$SRC_DEB" ||
-  wget -q -O "$SRC_DEB" "$BASE/linux-source-5.4.0_${KPKGVER}_all.deb"
+  wget -q -O "$SRC_DEB" "$BASE/linux-source-${KSRC_SERIES}_${KPKGVER}_all.deb"
 
 dpkg-deb -x "$SRC_DEB" "$SRC_DEB_ROOT"
 tar -C "$KERNEL_SRC_WORK" \
-  -xf "$SRC_DEB_ROOT/usr/src/linux-source-5.4.0/linux-source-5.4.0.tar.bz2"
+  -xf "$SRC_DEB_ROOT/usr/src/linux-source-${KSRC_SERIES}/linux-source-${KSRC_SERIES}.tar.bz2"
 
 EXTRACT_VMLINUX_SCRIPT=$LINUX_SRC/scripts/extract-vmlinux
 test -x "$EXTRACT_VMLINUX_SCRIPT"
@@ -61,4 +61,3 @@ file "$VMLINUX_DEBUG"
 readelf -n "$VMLINUX_DEBUG" | grep -A2 'Build ID'
 readelf -n "$VMLINUX_DEBUG" | grep -q "$EXPECTED_BUILD_ID"
 readelf -S "$VMLINUX_DEBUG" | egrep 'debug_info|debug_line|symtab|strtab'
-

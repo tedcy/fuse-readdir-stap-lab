@@ -31,7 +31,7 @@ The field-level probe points are named P1 to P4 in
 Run on the host whose running kernel should be inspected.
 
 ```bash
-git clone git@github.com:tedcy/fuse-readdir-stap-lab.git
+git clone https://github.com/tedcy/fuse-readdir-stap-lab.git
 cd fuse-readdir-stap-lab
 
 scripts/00-init-env.sh
@@ -75,6 +75,8 @@ export KREL=$(uname -r)
 export KBASE=${KREL%-generic}
 export UBUNTU_REV=$(uname -v | sed -n 's/^#\([0-9]\+\)-Ubuntu.*/\1/p')
 export KPKGVER="$KBASE.$UBUNTU_REV"
+export KSRC_SERIES=$(printf '%s\n' "$KBASE" | sed 's/-[0-9]\+$//')
+export PKG_ABI=${KBASE##*-}
 export EXPECTED_BUILD_ID=
 export DBGSYM_URL=
 export EXPECTED_DDEB_SIZE=
@@ -87,7 +89,8 @@ lockdown must allow unsigned modules, and the running kernel, headers,
 ## File map
 
 * `scripts/00-init-env.sh`: checks the target system, installs base packages,
-  and writes `$HOME/systemtap-readdir-repro/repro-env.sh`.
+  creates `$HOME/systemtap-readdir-repro`, and writes
+  `$HOME/systemtap-readdir-repro/repro-env.sh`.
 * `scripts/01-prepare-kheaders.sh`: downloads Ubuntu kernel headers and writes
   `System.map` from `/proc/kallsyms`.
 * `scripts/02-build-systemtap-toolchain.sh`: builds elfutils 0.195 and
@@ -103,4 +106,3 @@ lockdown must allow unsigned modules, and the running kernel, headers,
 * `scripts/07-run-field-readdir.sh`: runs the P1-P4 field-level script.
 * `scripts/08-cleanup-check.sh`: checks for residual `stap_*` modules or
   `staprun` processes.
-
